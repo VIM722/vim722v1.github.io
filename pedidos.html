@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pedidos · Distribuidora Andina</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-word">Distribuidora<br>Andina</span>
+      <span class="brand-sub">Sistema de gestión de pedidos</span>
+    </div>
+    <div class="sidebar-divider"></div>
+    <nav class="nav">
+      <a href="index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
+        Panel general
+      </a>
+      <a href="clientes.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.8 19c.7-3 3-4.7 6.2-4.7s5.5 1.7 6.2 4.7"/><path d="M16 8.3a3 3 0 1 1 3.2 3"/><path d="M21.2 19c-.4-1.9-1.4-3.3-2.9-4.1"/></svg>
+        Clientes
+      </a>
+      <a href="productos.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5v-9Z"/><path d="M3.7 7.6 12 12l8.3-4.4"/><path d="M12 12v9"/></svg>
+        Productos
+      </a>
+      <a href="pedidos.html" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3.5" width="14" height="17" rx="1.6"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4.5"/></svg>
+        Pedidos
+      </a>
+      <a href="auditoria.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.5 19 6.3v5.4c0 4.4-2.9 7.6-7 8.8-4.1-1.2-7-4.4-7-8.8V6.3Z"/><path d="M9.2 12.1l2 2 3.7-4"/></svg>
+        Auditoría
+      </a>
+    </nav>
+    <div class="sidebar-foot">Filial Chincha · Arquitectura de Software</div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Pedidos</p>
+        <h1>Pedidos de clientes</h1>
+        <p>Registra un pedido nuevo o consulta el estado de los que ya existen.</p>
+      </div>
+    </div>
+
+    <section class="panel panel-accent" id="nuevo">
+      <h2>Registrar pedido</h2>
+      <p class="panel-desc">La disponibilidad se verifica y el total se calcula automáticamente antes de guardar.</p>
+      <form id="form-pedido">
+        <div class="field">
+          <label for="cliente">Cliente</label>
+          <select id="cliente" required></select>
+        </div>
+
+        <label>Productos del pedido</label>
+        <div id="lineas-item"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="agregar-linea">+ Agregar producto</button>
+
+        <div class="total-strip">
+          <span class="label">Total del pedido</span>
+          <span class="value" id="total-pedido">S/ 0.00</span>
+        </div>
+
+        <div class="actions-row">
+          <button class="btn btn-primary" type="submit">Registrar pedido</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Todos los pedidos <span class="pill-count" id="contador-pedidos">0</span></h2>
+      <div class="filter-bar">
+        <select id="filtro-estado">
+          <option value="">Todos los estados</option>
+          <option value="REGISTRADO">Registrado</option>
+          <option value="STOCK_RESERVADO">Stock reservado</option>
+          <option value="PAGO_PENDIENTE">Pago pendiente</option>
+          <option value="PAGADO">Pagado</option>
+          <option value="CANCELADO">Cancelado</option>
+        </select>
+      </div>
+      <div id="tabla-pedidos"></div>
+    </section>
+  </main>
+</div>
+
+<script src="js/eventstore.js"></script>
+<script src="js/domain.js"></script>
+<script src="js/payments.js"></script>
+<script src="js/data.js"></script>
+<script src="js/commands.js"></script>
+<script src="js/queries.js"></script>
+<script src="js/ui-common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+  const productos = App.Data.listarProductos();
+  const clientes = App.Data.listarClientes();
+
+  document.getElementById('cliente').innerHTML =
+    '<option value="">Selecciona un cliente</option>' +
+    clientes.map(c => `<option value="${c.id}">${App.UI.escapeHtml(c.nombre)}</option>`).join('');
+
+  const lineasCont = document.getElementById('lineas-item');
+  let contadorLinea = 0;
+
+  function opcionesProducto(seleccionado) {
+    return '<option value="">Selecciona un producto</option>' + productos.map(p => {
+      const disp = App.Data.stockDisponible(p);
+      return `<option value="${p.id}" ${p.id === seleccionado ? 'selected' : ''}>${App.UI.escapeHtml(p.nombre)} · disp. ${disp}</option>`;
+    }).join('');
+  }
+
+  function agregarLinea() {
+    contadorLinea++;
+    const id = 'linea-' + contadorLinea;
+    const div = document.createElement('div');
+    div.className = 'item-line';
+    div.id = id;
+    div.innerHTML = `
+      <select class="linea-producto">${opcionesProducto()}</select>
+      <input type="number" class="linea-cantidad" min="1" step="1" value="1">
+      <span class="line-total">S/ 0.00</span>
+      <button type="button" class="remove-btn" title="Quitar">×</button>
+    `;
+    lineasCont.appendChild(div);
+    div.querySelector('.linea-producto').addEventListener('change', recalcular);
+    div.querySelector('.linea-cantidad').addEventListener('input', recalcular);
+    div.querySelector('.remove-btn').addEventListener('click', () => { div.remove(); recalcular(); });
+    recalcular();
+  }
+
+  function recalcular() {
+    let total = 0;
+    lineasCont.querySelectorAll('.item-line').forEach(linea => {
+      const productoId = linea.querySelector('.linea-producto').value;
+      const cantidad = parseInt(linea.querySelector('.linea-cantidad').value, 10) || 0;
+      const producto = productos.find(p => p.id === productoId);
+      const subtotal = producto ? producto.precio * cantidad : 0;
+      linea.querySelector('.line-total').textContent = App.UI.formatoMoneda(subtotal);
+      total += subtotal;
+    });
+    document.getElementById('total-pedido').textContent = App.UI.formatoMoneda(total);
+  }
+
+  document.getElementById('agregar-linea').addEventListener('click', agregarLinea);
+  agregarLinea();
+
+  document.getElementById('form-pedido').addEventListener('submit', (e) => {
+    e.preventDefault();
+    try {
+      const clienteId = document.getElementById('cliente').value;
+      const items = Array.from(lineasCont.querySelectorAll('.item-line')).map(linea => ({
+        productoId: linea.querySelector('.linea-producto').value,
+        cantidad: parseInt(linea.querySelector('.linea-cantidad').value, 10) || 0,
+      })).filter(i => i.productoId);
+
+      const pedidoId = App.Commands.registrarPedido(clienteId, items);
+      App.UI.toast(`Pedido ${pedidoId} registrado correctamente.`);
+      window.location.href = 'pedido.html?id=' + encodeURIComponent(pedidoId);
+    } catch (err) {
+      App.UI.manejarError(err);
+    }
+  });
+
+  function pintarPedidos() {
+    const filtro = document.getElementById('filtro-estado').value;
+    const pedidos = App.Queries.listarPedidos().filter(p => !filtro || p.estado === filtro);
+    document.getElementById('contador-pedidos').textContent = pedidos.length;
+    const cont = document.getElementById('tabla-pedidos');
+    if (pedidos.length === 0) {
+      cont.innerHTML = `<div class="table-empty">No hay pedidos con este filtro.</div>`;
+      return;
+    }
+    cont.innerHTML = `
+      <table>
+        <thead><tr><th>Código</th><th>Cliente</th><th>Fecha</th><th class="num">Total</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          ${pedidos.map(p => {
+            const cliente = App.Data.obtenerCliente(p.clienteId);
+            return `<tr>
+              <td><span class="code">${p.id}</span></td>
+              <td>${App.UI.escapeHtml(cliente ? cliente.nombre : 'Cliente eliminado')}</td>
+              <td>${App.UI.formatoFecha(p.creadoEn)}</td>
+              <td class="num">${App.UI.formatoMoneda(p.total)}</td>
+              <td>${App.UI.badgeEstado(p.estado)}</td>
+              <td><a class="btn btn-ghost btn-sm" href="pedido.html?id=${encodeURIComponent(p.id)}">Ver detalle</a></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  document.getElementById('filtro-estado').addEventListener('change', pintarPedidos);
+  pintarPedidos();
+
+  if (window.location.hash === '#nuevo') {
+    document.getElementById('nuevo').scrollIntoView({ behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>

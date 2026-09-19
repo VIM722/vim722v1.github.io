@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditoría · Distribuidora Andina</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-word">Distribuidora<br>Andina</span>
+      <span class="brand-sub">Sistema de gestión de pedidos</span>
+    </div>
+    <div class="sidebar-divider"></div>
+    <nav class="nav">
+      <a href="index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
+        Panel general
+      </a>
+      <a href="clientes.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.8 19c.7-3 3-4.7 6.2-4.7s5.5 1.7 6.2 4.7"/><path d="M16 8.3a3 3 0 1 1 3.2 3"/><path d="M21.2 19c-.4-1.9-1.4-3.3-2.9-4.1"/></svg>
+        Clientes
+      </a>
+      <a href="productos.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5v-9Z"/><path d="M3.7 7.6 12 12l8.3-4.4"/><path d="M12 12v9"/></svg>
+        Productos
+      </a>
+      <a href="pedidos.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3.5" width="14" height="17" rx="1.6"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4.5"/></svg>
+        Pedidos
+      </a>
+      <a href="auditoria.html" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.5 19 6.3v5.4c0 4.4-2.9 7.6-7 8.8-4.1-1.2-7-4.4-7-8.8V6.3Z"/><path d="M9.2 12.1l2 2 3.7-4"/></svg>
+        Auditoría
+      </a>
+    </nav>
+    <div class="sidebar-foot">Filial Chincha · Arquitectura de Software</div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Auditoría</p>
+        <h1>Registro de eventos</h1>
+        <p>Cada cambio queda guardado de forma permanente. Nada en esta lista se edita ni se borra: es la base para resolver cualquier disputa sobre un pago o una cancelación.</p>
+      </div>
+    </div>
+
+    <section class="panel panel-accent">
+      <h2>Todos los eventos <span class="pill-count" id="contador-eventos">0</span></h2>
+      <div class="filter-bar">
+        <select id="filtro-pedido"><option value="">Todos los pedidos</option></select>
+        <select id="filtro-tipo">
+          <option value="">Todos los tipos de evento</option>
+          <option value="PedidoRegistrado">Pedido registrado</option>
+          <option value="StockReservado">Stock reservado</option>
+          <option value="PagoRegistrado">Pago registrado</option>
+          <option value="PagoConfirmado">Pago confirmado por el operador</option>
+          <option value="TransferenciaConfirmada">Transferencia confirmada (registro antiguo)</option>
+          <option value="PedidoCancelado">Pedido cancelado</option>
+        </select>
+      </div>
+      <div id="tabla-eventos"></div>
+    </section>
+  </main>
+</div>
+
+<script src="js/eventstore.js"></script>
+<script src="js/domain.js"></script>
+<script src="js/payments.js"></script>
+<script src="js/data.js"></script>
+<script src="js/commands.js"></script>
+<script src="js/queries.js"></script>
+<script src="js/ui-common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+  const pedidoIds = App.EventStore.idsDePedidos();
+  document.getElementById('filtro-pedido').innerHTML += pedidoIds.map(id => `<option value="${id}">${id}</option>`).join('');
+
+  function resumenPayload(evento) {
+    switch (evento.tipo) {
+      case 'PedidoRegistrado': {
+        const cliente = App.Data.obtenerCliente(evento.payload.clienteId);
+        return `${App.UI.escapeHtml(cliente ? cliente.nombre : evento.payload.clienteId)} · ${App.UI.formatoMoneda(evento.payload.total)}`;
+      }
+      case 'PagoRegistrado': {
+        const medio = App.Payments.obtener(evento.payload.medio);
+        return `${medio ? medio.label : evento.payload.medio} · ${App.UI.formatoMoneda(evento.payload.monto)} · ${evento.payload.estadoPago === 'CONFIRMADO' ? 'confirmado' : 'pendiente'}`;
+      }
+      case 'PedidoCancelado':
+        return App.UI.escapeHtml(evento.payload.motivo || '—');
+      case 'PagoConfirmado': {
+        const medio = App.Payments.obtener(evento.payload.medio);
+        return `Recepción verificada${medio ? ' · ' + medio.label : ''}`;
+      }
+      case 'TransferenciaConfirmada':
+        return 'Depósito verificado';
+      case 'StockReservado':
+        return 'Reserva de unidades';
+      default:
+        return '—';
+    }
+  }
+
+  function pintar() {
+    const filtroPedido = document.getElementById('filtro-pedido').value;
+    const filtroTipo = document.getElementById('filtro-tipo').value;
+    const eventos = App.Queries.historialCompleto()
+      .filter(e => !filtroPedido || e.pedidoId === filtroPedido)
+      .filter(e => !filtroTipo || e.tipo === filtroTipo)
+      .slice()
+      .reverse();
+
+    document.getElementById('contador-eventos').textContent = eventos.length;
+    const cont = document.getElementById('tabla-eventos');
+    if (eventos.length === 0) {
+      cont.innerHTML = `<div class="table-empty">No hay eventos con este filtro.</div>`;
+      return;
+    }
+    cont.innerHTML = `
+      <table>
+        <thead><tr><th>Fecha</th><th>Pedido</th><th>Evento</th><th>Detalle</th></tr></thead>
+        <tbody>
+          ${eventos.map(e => `
+            <tr>
+              <td style="white-space:nowrap;">${App.UI.formatoFecha(e.fecha)}</td>
+              <td><a class="code" href="pedido.html?id=${encodeURIComponent(e.pedidoId)}">${e.pedidoId}</a></td>
+              <td>${App.Domain.etiquetaEvento(e.tipo)}</td>
+              <td style="color:var(--ink-soft);">${resumenPayload(e)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  document.getElementById('filtro-pedido').addEventListener('change', pintar);
+  document.getElementById('filtro-tipo').addEventListener('change', pintar);
+  pintar();
+</script>
+</body>
+</html>

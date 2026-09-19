@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel general · Distribuidora Andina</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-word">Distribuidora<br>Andina</span>
+      <span class="brand-sub">Sistema de gestión de pedidos</span>
+    </div>
+    <div class="sidebar-divider"></div>
+    <nav class="nav">
+      <a href="index.html" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
+        Panel general
+      </a>
+      <a href="clientes.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.8 19c.7-3 3-4.7 6.2-4.7s5.5 1.7 6.2 4.7"/><path d="M16 8.3a3 3 0 1 1 3.2 3"/><path d="M21.2 19c-.4-1.9-1.4-3.3-2.9-4.1"/></svg>
+        Clientes
+      </a>
+      <a href="productos.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5v-9Z"/><path d="M3.7 7.6 12 12l8.3-4.4"/><path d="M12 12v9"/></svg>
+        Productos
+      </a>
+      <a href="pedidos.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3.5" width="14" height="17" rx="1.6"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4.5"/></svg>
+        Pedidos
+      </a>
+      <a href="auditoria.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.5 19 6.3v5.4c0 4.4-2.9 7.6-7 8.8-4.1-1.2-7-4.4-7-8.8V6.3Z"/><path d="M9.2 12.1l2 2 3.7-4"/></svg>
+        Auditoría
+      </a>
+    </nav>
+    <div class="sidebar-foot">Filial Chincha · Arquitectura de Software</div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Panel general</p>
+        <h1>Buen día. Esto es lo que está pasando con los pedidos.</h1>
+        <p>Un vistazo rápido a clientes, ventas y pagos pendientes de confirmación.</p>
+      </div>
+      <a class="btn btn-accent" href="pedidos.html#nuevo">Registrar pedido</a>
+    </div>
+
+    <div class="kpi-row" id="kpi-row"></div>
+
+    <div class="grid-2">
+      <section class="panel panel-accent">
+        <h2>Pedidos recientes</h2>
+        <p class="panel-desc">Los últimos movimientos registrados en el sistema.</p>
+        <div id="pedidos-recientes"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Medios de pago habilitados</h2>
+        <p class="panel-desc">Cada uno se procesa de forma independiente; agregar uno nuevo no afecta a los demás.</p>
+        <div id="medios-pago"></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="js/eventstore.js"></script>
+<script src="js/domain.js"></script>
+<script src="js/payments.js"></script>
+<script src="js/data.js"></script>
+<script src="js/commands.js"></script>
+<script src="js/queries.js"></script>
+<script src="js/ui-common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+  const kpis = App.Queries.kpis();
+  document.getElementById('kpi-row').innerHTML = `
+    <div class="kpi">
+      <div class="kpi-label">Pedidos registrados</div>
+      <div class="kpi-value">${kpis.totalPedidos}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Pagos por confirmar</div>
+      <div class="kpi-value">${kpis.pendientesPago}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Ingresos confirmados</div>
+      <div class="kpi-value">${App.UI.formatoMoneda(kpis.ingresosConfirmados)}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Clientes registrados</div>
+      <div class="kpi-value">${kpis.totalClientes}</div>
+    </div>
+  `;
+
+  const recientes = App.Queries.listarPedidos().slice(0, 5);
+  const cont = document.getElementById('pedidos-recientes');
+  if (recientes.length === 0) {
+    cont.innerHTML = `<div class="empty-state"><h3>Aún no hay pedidos</h3><p>Registra el primero desde el módulo de Pedidos.</p><a class="btn btn-primary" href="pedidos.html#nuevo">Registrar pedido</a></div>`;
+  } else {
+    cont.innerHTML = `
+      <table>
+        <thead><tr><th>Código</th><th>Cliente</th><th class="num">Total</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          ${recientes.map(p => {
+            const cliente = App.Data.obtenerCliente(p.clienteId);
+            return `<tr>
+              <td><span class="code">${p.id}</span></td>
+              <td>${App.UI.escapeHtml(cliente ? cliente.nombre : 'Cliente eliminado')}</td>
+              <td class="num">${App.UI.formatoMoneda(p.total)}</td>
+              <td>${App.UI.badgeEstado(p.estado)}</td>
+              <td><a class="btn btn-ghost btn-sm" href="pedido.html?id=${encodeURIComponent(p.id)}">Ver</a></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  document.getElementById('medios-pago').innerHTML = App.Payments.listar().map(m => `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="font-weight:600;font-size:14px;">${m.label}</div>
+      <div style="font-size:12.5px;color:var(--ink-soft);">${m.descripcion}</div>
+    </div>
+  `).join('');
+</script>
+</body>
+</html>

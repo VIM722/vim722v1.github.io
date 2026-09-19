@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clientes · Distribuidora Andina</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-word">Distribuidora<br>Andina</span>
+      <span class="brand-sub">Sistema de gestión de pedidos</span>
+    </div>
+    <div class="sidebar-divider"></div>
+    <nav class="nav">
+      <a href="index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
+        Panel general
+      </a>
+      <a href="clientes.html" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.8 19c.7-3 3-4.7 6.2-4.7s5.5 1.7 6.2 4.7"/><path d="M16 8.3a3 3 0 1 1 3.2 3"/><path d="M21.2 19c-.4-1.9-1.4-3.3-2.9-4.1"/></svg>
+        Clientes
+      </a>
+      <a href="productos.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5v-9Z"/><path d="M3.7 7.6 12 12l8.3-4.4"/><path d="M12 12v9"/></svg>
+        Productos
+      </a>
+      <a href="pedidos.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3.5" width="14" height="17" rx="1.6"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4.5"/></svg>
+        Pedidos
+      </a>
+      <a href="auditoria.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.5 19 6.3v5.4c0 4.4-2.9 7.6-7 8.8-4.1-1.2-7-4.4-7-8.8V6.3Z"/><path d="M9.2 12.1l2 2 3.7-4"/></svg>
+        Auditoría
+      </a>
+    </nav>
+    <div class="sidebar-foot">Filial Chincha · Arquitectura de Software</div>
+  </aside>
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Clientes</p>
+        <h1>Clientes registrados</h1>
+        <p>Datos de contacto y comerciales de cada cliente al que se le puede asociar un pedido.</p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <section class="panel panel-accent">
+        <h2>Listado <span class="pill-count" id="contador-clientes">0</span></h2>
+        <p class="panel-desc">Ordenados alfabéticamente.</p>
+        <div id="tabla-clientes"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Registrar cliente</h2>
+        <p class="panel-desc">RF1 — asocia cada pedido a un cliente registrado.</p>
+        <form id="form-cliente">
+          <div class="field">
+            <label for="nombre">Razón social / nombre</label>
+            <input type="text" id="nombre" required placeholder="Ej. Bodega San Martín E.I.R.L.">
+          </div>
+          <div class="field">
+            <label for="documento">RUC / DNI</label>
+            <input type="text" id="documento" required placeholder="Ej. RUC 20481239876">
+          </div>
+          <div class="field">
+            <label for="telefono">Teléfono</label>
+            <input type="tel" id="telefono" required placeholder="Ej. 956 214 330">
+          </div>
+          <div class="field">
+            <label for="email">Correo electrónico</label>
+            <input type="email" id="email" required placeholder="Ej. compras@empresa.pe">
+          </div>
+          <button class="btn btn-primary btn-block" type="submit">Guardar cliente</button>
+        </form>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script src="js/eventstore.js"></script>
+<script src="js/domain.js"></script>
+<script src="js/payments.js"></script>
+<script src="js/data.js"></script>
+<script src="js/commands.js"></script>
+<script src="js/queries.js"></script>
+<script src="js/ui-common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+  function pintarClientes() {
+    const clientes = App.Data.listarClientes();
+    document.getElementById('contador-clientes').textContent = clientes.length;
+    const cont = document.getElementById('tabla-clientes');
+    if (clientes.length === 0) {
+      cont.innerHTML = `<div class="empty-state"><h3>No hay clientes todavía</h3><p>Registra el primero con el formulario.</p></div>`;
+      return;
+    }
+    cont.innerHTML = `
+      <table>
+        <thead><tr><th>Cliente</th><th>Documento</th><th>Contacto</th><th class="num">Pedidos</th></tr></thead>
+        <tbody>
+          ${clientes.map(c => {
+            const pedidos = App.Queries.listarPedidosPorCliente(c.id);
+            return `<tr>
+              <td>${App.UI.escapeHtml(c.nombre)}</td>
+              <td>${App.UI.escapeHtml(c.documento)}</td>
+              <td>${App.UI.escapeHtml(c.telefono)}<br><span style="color:var(--ink-faint);font-size:12.5px;">${App.UI.escapeHtml(c.email)}</span></td>
+              <td class="num">${pedidos.length}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  document.getElementById('form-cliente').addEventListener('submit', (e) => {
+    e.preventDefault();
+    try {
+      App.Data.registrarCliente({
+        nombre: document.getElementById('nombre').value.trim(),
+        documento: document.getElementById('documento').value.trim(),
+        telefono: document.getElementById('telefono').value.trim(),
+        email: document.getElementById('email').value.trim(),
+      });
+      e.target.reset();
+      pintarClientes();
+      App.UI.toast('Cliente registrado correctamente.');
+    } catch (err) {
+      App.UI.manejarError(err);
+    }
+  });
+
+  pintarClientes();
+</script>
+</body>
+</html>

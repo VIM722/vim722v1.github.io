@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detalle de pedido · Distribuidora Andina</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-word">Distribuidora<br>Andina</span>
+      <span class="brand-sub">Sistema de gestión de pedidos</span>
+    </div>
+    <div class="sidebar-divider"></div>
+    <nav class="nav">
+      <a href="index.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
+        Panel general
+      </a>
+      <a href="clientes.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.8 19c.7-3 3-4.7 6.2-4.7s5.5 1.7 6.2 4.7"/><path d="M16 8.3a3 3 0 1 1 3.2 3"/><path d="M21.2 19c-.4-1.9-1.4-3.3-2.9-4.1"/></svg>
+        Clientes
+      </a>
+      <a href="productos.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5v-9Z"/><path d="M3.7 7.6 12 12l8.3-4.4"/><path d="M12 12v9"/></svg>
+        Productos
+      </a>
+      <a href="pedidos.html" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3.5" width="14" height="17" rx="1.6"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4.5"/></svg>
+        Pedidos
+      </a>
+      <a href="auditoria.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3.5 19 6.3v5.4c0 4.4-2.9 7.6-7 8.8-4.1-1.2-7-4.4-7-8.8V6.3Z"/><path d="M9.2 12.1l2 2 3.7-4"/></svg>
+        Auditoría
+      </a>
+    </nav>
+    <div class="sidebar-foot">Filial Chincha · Arquitectura de Software</div>
+  </aside>
+
+  <main class="main" id="main-content">
+    <!-- contenido generado por JS -->
+  </main>
+</div>
+
+<script src="js/eventstore.js"></script>
+<script src="js/domain.js"></script>
+<script src="js/payments.js"></script>
+<script src="js/data.js"></script>
+<script src="js/commands.js"></script>
+<script src="js/queries.js"></script>
+<script src="js/ui-common.js"></script>
+<script src="js/seed.js"></script>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const pedidoId = params.get('id');
+  const main = document.getElementById('main-content');
+
+  function detalleEvento(evento) {
+    switch (evento.tipo) {
+      case 'PedidoRegistrado': {
+        const cliente = App.Data.obtenerCliente(evento.payload.clienteId);
+        return `Cliente: ${App.UI.escapeHtml(cliente ? cliente.nombre : evento.payload.clienteId)} · ${evento.payload.items.length} producto(s) · Total ${App.UI.formatoMoneda(evento.payload.total)}`;
+      }
+      case 'StockReservado':
+        return 'Se reservaron las unidades solicitadas mientras se confirma el pago.';
+      case 'PagoRegistrado': {
+        const medio = App.Payments.obtener(evento.payload.medio);
+        const partes = [`Medio: ${medio ? medio.label : evento.payload.medio}`, `Monto: ${App.UI.formatoMoneda(evento.payload.monto)}`];
+        if (evento.payload.nroOperacion) partes.push(`N.º operación: ${App.UI.escapeHtml(evento.payload.nroOperacion)}`);
+        partes.push(evento.payload.estadoPago === 'CONFIRMADO' ? 'Confirmado al instante.' : 'Queda pendiente de confirmación por el operador.');
+        return partes.join(' · ');
+      }
+      case 'PagoConfirmado': {
+        const medio = App.Payments.obtener(evento.payload.medio);
+        return `El operador verificó la recepción del pago${medio ? ' (' + medio.label + ')' : ''}.`;
+      }
+      case 'TransferenciaConfirmada':
+        return 'El área de Pagos verificó el depósito en la cuenta de la empresa.';
+      case 'PedidoCancelado':
+        return `Motivo: ${App.UI.escapeHtml(evento.payload.motivo || 'No especificado')}`;
+      default:
+        return '';
+    }
+  }
+
+  function claseTimeline(tipo) {
+    if (tipo === 'PedidoCancelado') return 'is-cancel';
+    if (tipo === 'PagoRegistrado' || tipo === 'PagoConfirmado' || tipo === 'TransferenciaConfirmada') return 'is-pago';
+    return '';
+  }
+
+  const ICONO_COPIAR = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8.5" y="8.5" width="11" height="11" rx="1.6"/><path d="M15.5 8.5v-2a1.6 1.6 0 0 0-1.6-1.6H6.1a1.6 1.6 0 0 0-1.6 1.6v7.8a1.6 1.6 0 0 0 1.6 1.6h2.4"/></svg>';
+
+  /** Datos que el operador le muestra al cliente según el medio elegido. */
+  function infoPagoHtml(medioTipo, total) {
+    const monto = `<div class="pay-amount"><span>Monto a pagar</span><strong>${App.UI.formatoMoneda(total)}</strong></div>`;
+
+    if (medioTipo === 'YAPE') {
+      return `
+        <div class="pay-info">
+          ${monto}
+          <div class="qr-box">
+            <button type="button" class="qr-thumb" id="btn-ampliar-qr" title="Ampliar QR">
+              <img src="${App.Payments.YAPE.qr}" alt="Código QR de Yape de Distribuidora Andina">
+            </button>
+            <p class="hint" style="text-align:center;">Pídele al cliente que escanee este código con Yape. Toca la imagen para ampliarla.</p>
+          </div>
+        </div>`;
+    }
+
+    if (medioTipo === 'TRANSFERENCIA') {
+      const b = App.Payments.DATOS_BANCARIOS;
+      const fila = (etiqueta, valor, copiable) => `
+        <div class="bank-row">
+          <dt>${etiqueta}</dt>
+          <dd>
+            <span>${App.UI.escapeHtml(valor)}</span>
+            ${copiable ? `<button type="button" class="copy-btn" data-copy="${App.UI.escapeHtml(valor)}" title="Copiar">${ICONO_COPIAR}</button>` : ''}
+          </dd>
+        </div>`;
+      return `
+        <div class="pay-info">
+          ${monto}
+          <dl class="bank-data">
+            ${fila('Banco', b.banco, false)}
+            ${fila('Titular', b.titular, false)}
+            ${fila(b.tipoCuenta, b.cuenta, true)}
+            ${fila('CCI', b.cci, true)}
+            ${fila('Moneda', b.moneda, false)}
+          </dl>
+          <p class="hint">Comparte estos datos con el cliente y pídele su número de operación al terminar.</p>
+        </div>`;
+    }
+
+    return '';
+  }
+
+  function copiarTexto(texto) {
+    const ok = () => App.UI.toast('Copiado: ' + texto);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(ok, () => copiaAlternativa(texto, ok));
+    } else {
+      copiaAlternativa(texto, ok);
+    }
+  }
+
+  function copiaAlternativa(texto, ok) {
+    const ta = document.createElement('textarea');
+    ta.value = texto;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); ok(); } catch (e) { App.UI.toast('No se pudo copiar.', 'error'); }
+    ta.remove();
+  }
+
+  function abrirQrAmpliado() {
+    const overlay = document.createElement('div');
+    overlay.className = 'qr-overlay';
+    overlay.innerHTML = `
+      <div class="qr-modal" role="dialog" aria-label="QR de Yape ampliado">
+        <img src="${App.Payments.YAPE.qr}" alt="Código QR de Yape de Distribuidora Andina">
+        <button type="button" class="btn btn-ghost btn-block">Cerrar</button>
+      </div>`;
+    const cerrar = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => { if (e.key === 'Escape') cerrar(); };
+    overlay.addEventListener('click', (e) => { if (e.target === overlay || e.target.tagName === 'BUTTON') cerrar(); });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(overlay);
+  }
+
+  /** Conecta los botones de copiar y de ampliar QR dentro de #info-pago. */
+  function activarInfoPago(contenedor) {
+    contenedor.querySelectorAll('.copy-btn').forEach((b) => b.addEventListener('click', () => copiarTexto(b.dataset.copy)));
+    const qr = contenedor.querySelector('#btn-ampliar-qr');
+    if (qr) qr.addEventListener('click', abrirQrAmpliado);
+  }
+
+  function render() {
+    const pedido = pedidoId ? App.Queries.obtenerPedido(pedidoId) : null;
+
+    if (!pedido) {
+      main.innerHTML = `
+        <div class="panel">
+          <div class="empty-state">
+            <h3>No encontramos este pedido</h3>
+            <p>Puede que el código no exista o ya no esté disponible.</p>
+            <a class="btn btn-primary" href="pedidos.html">Volver a pedidos</a>
+          </div>
+        </div>`;
+      return;
+    }
+
+    const cliente = App.Data.obtenerCliente(pedido.clienteId);
+    const eventos = App.Queries.historialDePedido(pedido.id);
+    const medios = App.Payments.listar();
+
+    let panelAccion = '';
+    if (pedido.estado === 'CANCELADO') {
+      panelAccion = `<p class="hint">Este pedido está cancelado. ${pedido.motivoCancelacion ? 'Motivo: ' + App.UI.escapeHtml(pedido.motivoCancelacion) : ''}</p>`;
+    } else if (pedido.estado === 'PAGADO') {
+      panelAccion = `<p class="hint">Este pedido ya fue pagado en su totalidad.</p>`;
+    } else if (pedido.estado === 'PAGO_PENDIENTE') {
+      const pago = pedido.pagos[pedido.pagos.length - 1];
+      const medioPago = App.Payments.obtener(pago.medio);
+      panelAccion = `
+        <p class="hint" style="margin:0 0 12px;">Pago por <strong>${medioPago ? medioPago.label : pago.medio}</strong> registrado${pago.nroOperacion ? ' (N.º operación ' + App.UI.escapeHtml(pago.nroOperacion) + ')' : ''}, en espera de tu confirmación.</p>
+        <div id="info-pago">${infoPagoHtml(pago.medio, pedido.total)}</div>
+        <button class="btn btn-primary btn-block" id="btn-confirmar" style="margin-top:14px;">Confirmar que recibí el pago</button>
+        <button class="btn btn-danger-ghost btn-block" id="btn-cancelar" style="margin-top:10px;">Cancelar pedido</button>
+      `;
+    } else {
+      panelAccion = `
+        <form id="form-pago">
+          <div class="field">
+            <label for="medio">Medio de pago</label>
+            <select id="medio" required>
+              ${medios.map(m => `<option value="${m.tipo}">${m.label}</option>`).join('')}
+            </select>
+          </div>
+          <div id="info-pago"></div>
+          <div class="field" id="campo-operacion" style="display:none;">
+            <label for="nroOperacion" id="label-operacion">N.º de operación</label>
+            <input type="text" id="nroOperacion" placeholder="Ej. OP-88213345">
+          </div>
+          <p class="hint" id="hint-pago"></p>
+          <button class="btn btn-accent btn-block" type="submit" id="btn-registrar-pago">Registrar pago</button>
+        </form>
+        ${pedido.estado !== 'CANCELADO' ? `<button class="btn btn-danger-ghost btn-block" id="btn-cancelar" style="margin-top:10px;">Cancelar pedido</button>` : ''}
+      `;
+    }
+
+    main.innerHTML = `
+      <div class="page-head">
+        <div>
+          <p class="eyebrow"><a href="pedidos.html" style="color:inherit;">← Pedidos</a></p>
+          <h1>Pedido <span class="code">${pedido.id}</span></h1>
+          <p>${App.UI.escapeHtml(cliente ? cliente.nombre : 'Cliente eliminado')} · Creado el ${App.UI.formatoFecha(pedido.creadoEn)}</p>
+        </div>
+        <div>${App.UI.badgeEstado(pedido.estado)}</div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <section class="panel panel-accent">
+            <h2>Productos del pedido</h2>
+            <table>
+              <thead><tr><th>Producto</th><th class="num">Cantidad</th><th class="num">Precio</th><th class="num">Subtotal</th></tr></thead>
+              <tbody>
+                ${pedido.items.map(i => `
+                  <tr>
+                    <td>${App.UI.escapeHtml(i.nombre)}</td>
+                    <td class="num">${i.cantidad}</td>
+                    <td class="num">${App.UI.formatoMoneda(i.precioUnitario)}</td>
+                    <td class="num">${App.UI.formatoMoneda(i.cantidad * i.precioUnitario)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div class="total-strip">
+              <span class="label">Total del pedido</span>
+              <span class="value">${App.UI.formatoMoneda(pedido.total)}</span>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>Historial de auditoría</h2>
+            <p class="panel-desc">Cómo y cuándo este pedido llegó a su estado actual, evento por evento.</p>
+            <div class="timeline">
+              ${eventos.map(ev => `
+                <div class="timeline-item ${claseTimeline(ev.tipo)}">
+                  <div class="timeline-time">${App.UI.formatoFecha(ev.fecha)}</div>
+                  <div class="timeline-title">${App.Domain.etiquetaEvento(ev.tipo)}</div>
+                  <div class="timeline-detail">${detalleEvento(ev)}</div>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+        </div>
+
+        <section class="panel">
+          <h2>Pago</h2>
+          <p class="panel-desc">Yape y transferencia quedan pendientes hasta que el operador confirme la recepción; la tarjeta confirma al instante.</p>
+          ${panelAccion}
+        </section>
+      </div>
+    `;
+
+    const selectMedio = document.getElementById('medio');
+    if (selectMedio) {
+      const actualizarMedio = () => {
+        const medio = App.Payments.obtener(selectMedio.value);
+        const info = document.getElementById('info-pago');
+        info.innerHTML = infoPagoHtml(selectMedio.value, pedido.total);
+        activarInfoPago(info);
+
+        const campo = document.getElementById('campo-operacion');
+        const input = document.getElementById('nroOperacion');
+        const label = document.getElementById('label-operacion');
+        const pideNro = medio && medio.requiereConfirmacionOperador;
+        campo.style.display = pideNro ? 'block' : 'none';
+        if (!pideNro) input.value = '';
+        if (medio && medio.requiereNroOperacion) {
+          label.textContent = 'N.º de operación de la transferencia';
+          input.placeholder = 'Ej. OP-88213345';
+        } else {
+          label.textContent = 'N.º de operación de Yape (opcional)';
+          input.placeholder = 'Ej. 01234567';
+        }
+
+        const confirmaOperador = medio && medio.requiereConfirmacionOperador;
+        document.getElementById('hint-pago').innerHTML = confirmaOperador
+          ? `Queda <strong>pendiente</strong> hasta que confirmes la recepción por el total: <strong>${App.UI.formatoMoneda(pedido.total)}</strong>.`
+          : `Se procesará por el total del pedido: <strong>${App.UI.formatoMoneda(pedido.total)}</strong>.`;
+        document.getElementById('btn-registrar-pago').textContent = confirmaOperador ? 'Registrar pago (pendiente de confirmar)' : 'Registrar pago';
+      };
+      selectMedio.addEventListener('change', actualizarMedio);
+      actualizarMedio();
+    }
+
+    const infoPendiente = document.getElementById('info-pago');
+    if (infoPendiente && !selectMedio) activarInfoPago(infoPendiente);
+
+    const formPago = document.getElementById('form-pago');
+    if (formPago) {
+      formPago.addEventListener('submit', (e) => {
+        e.preventDefault();
+        try {
+          const medio = document.getElementById('medio').value;
+          const nroOperacion = document.getElementById('nroOperacion') ? document.getElementById('nroOperacion').value.trim() : '';
+          App.Commands.registrarPago(pedido.id, medio, pedido.total, nroOperacion);
+          App.UI.toast('Pago registrado correctamente.');
+          render();
+        } catch (err) {
+          App.UI.manejarError(err);
+        }
+      });
+    }
+
+    const btnConfirmar = document.getElementById('btn-confirmar');
+    if (btnConfirmar) {
+      btnConfirmar.addEventListener('click', () => {
+        try {
+          App.Commands.confirmarPago(pedido.id);
+          App.UI.toast('Pago confirmado. Pedido marcado como pagado.');
+          render();
+        } catch (err) {
+          App.UI.manejarError(err);
+        }
+      });
+    }
+
+    const btnCancelar = document.getElementById('btn-cancelar');
+    if (btnCancelar) {
+      btnCancelar.addEventListener('click', () => {
+        const motivo = window.prompt('Motivo de la cancelación:');
+        if (motivo === null) return;
+        try {
+          App.Commands.cancelarPedido(pedido.id, motivo);
+          App.UI.toast('Pedido cancelado.');
+          render();
+        } catch (err) {
+          App.UI.manejarError(err);
+        }
+      });
+    }
+  }
+
+  render();
+</script>
+</body>
+</html>
