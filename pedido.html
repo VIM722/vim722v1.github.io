@@ -111,7 +111,6 @@
     }
 
     if (medioTipo === 'TRANSFERENCIA') {
-      const b = App.Payments.DATOS_BANCARIOS;
       const fila = (etiqueta, valor, copiable) => `
         <div class="bank-row">
           <dt>${etiqueta}</dt>
@@ -120,16 +119,23 @@
             ${copiable ? `<button type="button" class="copy-btn" data-copy="${App.UI.escapeHtml(valor)}" title="Copiar">${ICONO_COPIAR}</button>` : ''}
           </dd>
         </div>`;
-      return `
-        <div class="pay-info">
-          ${monto}
+    
+      const bloquesBancos = App.Payments.CUENTAS_BANCARIAS.map((b) => `
+        <div class="bank-account">
+          <h3 class="bank-name">${App.UI.escapeHtml(b.banco)}</h3>
           <dl class="bank-data">
-            ${fila('Banco', b.banco, false)}
             ${fila('Titular', b.titular, false)}
             ${fila(b.tipoCuenta, b.cuenta, true)}
             ${fila('CCI', b.cci, true)}
             ${fila('Moneda', b.moneda, false)}
           </dl>
+        </div>
+      `).join('');
+    
+      return `
+        <div class="pay-info">
+          ${monto}
+          ${bloquesBancos}
           <p class="hint">Comparte estos datos con el cliente y pídele su número de operación al terminar.</p>
         </div>`;
     }
