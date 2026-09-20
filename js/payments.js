@@ -17,14 +17,24 @@
 window.App = window.App || {};
 
 App.Payments = (function () {
-  const DATOS_BANCARIOS = {
-    banco: 'BCP',
-    titular: 'Distribuidora Andina.',
-    tipoCuenta: 'Cuenta corriente',
-    cuenta: '191-4567890123',
-    cci: '00219100456789012345',
-    moneda: 'Soles (PEN)',
-  };
+  const CUENTAS_BANCARIAS = [
+    {
+      banco: 'BCP',
+      titular: 'Distribuidora Andina.',
+      tipoCuenta: 'Cuenta corriente',
+      cuenta: '191-4567890123',
+      cci: '00219100456789012345',
+      moneda: 'Soles (PEN)',
+    },
+    {
+      banco: 'BBVA',
+      titular: 'Distribuidora Andina.',
+      tipoCuenta: 'Cuenta corriente',
+      cuenta: '0011-0123-0100123456',
+      cci: '01112300010012345678',
+      moneda: 'Soles (PEN)',
+    },
+  ];
 
   const YAPE = {
     qr: 'assets/yape-qr.jpg',
