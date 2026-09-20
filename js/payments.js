@@ -90,5 +90,5 @@ App.Payments = (function () {
     return MEDIOS[tipo];
   }
 
-  return { procesarPago, listar, obtener, DATOS_BANCARIOS, YAPE };
+  return { procesarPago, listar, obtener, CUENTAS_BANCARIAS, YAPE };
 })();
